@@ -1,0 +1,306 @@
+---
+title: "Heckman's_correction"
+author: "坂上 幸"
+date: "2022/6/25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##xの値を等間隔で取っていく
+x <- seq(-200,400,length=600)
+##期待値100, 分散100の正規分布を図示
+plot(x, dnorm(x,mean=100,sd=100), type="l", xlab="Y*", ylab="", yaxt="n", main="normal distribution and truncation")
+##観察されずに打ち切りになるcut-offを追加で図示
+abline(v = 0)
+
+##以下ではcut-off以下で打ち切りになる部分に影を付けて図示
+xvals <- seq(-200, 0, length=200)
+dvals <- dnorm(xvals, mean=100, sd=100)
+polygon(c(xvals,rev(xvals)), c(rep(0,200), rev(dvals)), col="gray")
+
+
+#install.packages("truncnorm") #切断正規分布を作るためのパッケージ"truncnorm"をインストール．
+library(truncnorm)
+##標準化した誤差項の実現時：残差を-3から3まで等間隔でとる
+x <- seq(-3,3,length=1000)
+##標準正規分布をプロットする
+plot(x, dnorm(x, mean=0, sd=1), 
+     type="l", ylim=c(0,0.5), 
+     xlab="u/σ", ylab="", main="truncated normal distribution")
+##truncated standard normal dist with cut-off = -0.8
+lines(x, dtruncnorm(x, a=-0.8, mean=0, sd=1), type="l", col="red")
+
+##truncated standard normal dist with cut-off = -1
+#lines(x, dtruncnorm(x, a= -1, mean=0, sd=1), type="l", col="blue")
+#dtruncnorm(a = cut-off)である
+
+##凡例を入れた
+legend("topright", 
+       legend=c("standard normal dist","truncated"),
+       lty=c(1,1),
+       col=c("black","red"),
+       bty="n"
+)
+
+
+
+#### cut-offをいくつに設定するかでcut-offを作らない場合の分布との違いが決まる
+
+#まずcut-offを設けないもとの分布
+plot(x, dnorm(x, mean=0, sd=1), 
+     type="l", ylim=c(0,0.75), 
+     xlab="u/σ", ylab="", 
+     main="relations between -Xβ and truncated normal distribution")
+## cut-offを大きめに設定。もとの分布と形が大きく異なる
+lines(x, dtruncnorm(x, a=-0.25, mean=0, sd=1), type="l", col="red")
+## cut-offを小さめに設定。もとの分布と形があまり異ならない。
+lines(x, dtruncnorm(x, a=-1.6, mean=0, sd=1), type="l", lty=2, col="blue")
+## 凡例を挿入
+legend("topright", 
+       legend=c("standard normal dist","large -Xβ","small -Xβ"),
+       lty=c(1,1,2),
+       col=c("black","red","blue"),
+       bty="n"
+)
+
+
+
+##### Inverse mills ratio の図示
+
+x <- seq(-3,3,length=1000)
+## PDF of Standard Normal Distを図示
+plot(x, dnorm(x,mean=0,sd=1), 
+     type="l", ylim=c(0,3), 
+     xlab="Xβ", ylab="", 
+     main="change of mills ratio when Xβ are changed")
+## CDF of Standard Normal Distを図示
+lines(x, pnorm(x,mean=0,sd=1), type="l",  lty=2, col = "blue")
+lines(x, dnorm(x,mean=0,sd=1)/pnorm(x,mean=0,sd=1), type="l", col="red")
+## 凡例を挿入
+legend("topright", 
+       legend=c("pdf","cdf","invmills"),
+       lty=c(1,2,1),
+       col=c("black","blue","red"),
+       bty="n"
+       )
+
+
+## Inverse mills ratio を手計算でやってみる
+cut_off1 <- -0.25
+cut_off2 <- -1.6
+
+inv.mill1 <- dnorm(cut_off1)/pnorm(cut_off1)
+inv.mill2 <- dnorm(cut_off2)/pnorm(cut_off2)
+cat(inv.mill1, inv.mill2)
+
+
+###########################################
+###########################################
+### Sample Selection Bias Correctionを実践
+
+
+my.seed <- 1925096 ##シミュレーション結果を固定するための設定
+set.seed(my.seed)
+library(magrittr)
+sample.size <- 10000
+param <- 2
+
+
+iq <- rnorm(n = sample.size, mean = 100, sd = 15)　##IQを決定
+error.term <- rnorm(sample.size, mean = 0, sd = 100) ##誤差項
+latent.wage <- 1000 + param*iq + error.term　##潜在的な賃金(時給)
+
+
+
+
+##まずランダムに欠損が起きる場合を考える
+pre.emp.status <- runif(n = sample.size, min = 0, max = 1)
+emp.status <- ifelse(pre.emp.status >= 0.5, 1, 0) ##失業・就業がランダムに決まる。
+
+##人間には入手できない完全データ
+latent.data <- as.data.frame(cbind(emp.status,
+                               latent.wage,
+                               iq))
+
+##働いている人の賃金データしか得ることができない現実のデータ
+samp.sel.bias.data <- latent.data %>% dplyr::filter(emp.status == 1) %>%
+        dplyr::select(-emp.status)
+
+##計測されないデータセット
+missing.data <- latent.data %>% dplyr::filter(emp.status == 0) %>%
+        dplyr::select(-emp.status)
+        
+        
+
+##　Sample Selection Biasを考慮せずに推定するとどうなるか
+##この場合、ランダムに欠損しているから共分散がゼロになり系統的バイアスはない
+lm.result <- lm(formula =  latent.wage ~ iq, data = samp.sel.bias.data)
+summary(lm.result)
+## 実際、parameterの値にほとんど一致していてバイアスは生じない。誤差ほんの少しで0.08798.
+
+##このようにランダムに欠損が発生している時は観測されたデータをもとに期待賃金関数を求めて、欠損値に割り当てて良いだろう。
+
+
+pred.wage <- missing.data$iq * lm.result$coefficients[2] + lm.result$coefficients[1]
+resid <- missing.data$latent.wage - pred.wage
+missing.data <- as.data.frame(cbind(missing.data, pred.wage,resid))
+ggplot2::ggplot(
+        ggplot2::aes(x = pred.wage, 
+                     y = resid), 
+        data = missing.data) +
+        ggplot2::geom_point() +
+        ggplot2::geom_abline(slope = 0,
+                             colour = "red") +
+        ggplot2::stat_smooth(method = "lm") +
+        ggplot2::labs(title = "Randomly unemployed",
+                      x = "predicted wage for unemployed",
+                      y = "resididual")
+## 平均ではpred.wageはlatent.wageに一致する。実際、任意のpred.wageをとるとそこでのresidの期待値はゼロになる。
+
+# R^2を計算したい
+
+
+
+
+
+#########################################
+## 次に系統的に欠損が起こる場合を考える。
+## ただいまいちこの誤差項の２次元正規分布が、実際の労働供給モデルの文脈で何を意味するのか解らない。
+
+
+## step1 : 問題設定
+
+## sample selection biasの形成過程より、共分散を絶対値で大きくして、参加条件の式の誤差項の分散を絶対値で小さくするとバイアスが大きくなる。ただし共分散行列は半正定値という制限あり。半正定値と行列式が正であること同値なことに注意.
+
+set.seed(my.seed)
+sigma <-  matrix(c(10^2, -10*10 +1, -10*10 + 1, 10^2), ncol = 2) ##分散共分散行列
+exp.vec <- c(0,0)　##期待値ベクトル
+param2 <- c(-100,1) ##働くか否かのモデル式のパラメーター
+rand <-  mvtnorm::rmvnorm(n = sample.size, mean = exp.vec, sigma) 
+
+## 系統的に失業・就業や賃金が決まる.
+latent.wage <- 1000 + param*iq + rand[,1]　 ##潜在的な賃金(時給)
+emp.status2 <- ifelse(param2[1] + param2[2]*iq + rand[,2]> 0, 1, 0)
+sum(emp.status2)
+
+## 神的な視点のデータを作成
+latent.data2 <- as.data.frame(cbind(latent.wage, 
+                                    emp.status2,
+                                    iq))
+
+## サンプルセレクションバイアスがかかったデータ
+samp.sel.bias.data2 <- latent.data2 %>% dplyr::filter(emp.status2 == 1) %>%
+        dplyr::select(-emp.status2)
+
+## 観察不可能なデータセット
+missing.data2 <- latent.data2 %>% dplyr::filter(emp.status2 == 0) %>%
+        dplyr::select(-emp.status2)
+
+
+
+## step2 : サンプルセレクションバイアスを考えずに推定するとどうなるか。
+
+
+## 観察データを用いて回帰分析
+biased.lm <- lm(latent.wage ~ iq, data = samp.sel.bias.data2)
+summary(biased.lm) ##真値2に対して推定値1.6993 とやや大きめのバイアスがかかっている
+
+
+## その結果をそのまま観察不可能データの予測に適用
+
+pred.wage2 <- missing.data2$iq * biased.lm$coefficients[2] + biased.lm$coefficients[1]
+resid2 <- missing.data2$latent.wage - pred.wage2
+missing.data2 <- as.data.frame(cbind(missing.data2, pred.wage2,resid2))
+ggplot2::ggplot(
+        ggplot2::aes(x = pred.wage2, 
+                     y = resid2), 
+        data = missing.data2) +
+        ggplot2::geom_point() +
+        ggplot2::stat_smooth(method = "lm") +
+        ggplot2::geom_abline(slope = 0, intercept = 0,
+                             color = "red") +
+        ggplot2::labs(title = "Sample selection bias",
+                      x = "predicted wage for unemployed",
+                      y = "resididual")
+## sample selection biasがかかっていて推定値に基づく予測値にバイアスあり
+
+
+## 観察されたデータのみをもとに働いていない人の賃金を予測すると、今回の設定のもとでは、上方バイアスがかかる。つまり、働いている人のデータセットから賃金を予測する関数を作成し、その関数に基づいて働いていない人の賃金を予測すると大きめに予測してしまう。
+
+
+
+##　step3：Heckman's two-step sample selection correctionをやってみる。
+
+obs.data <- latent.data2 %>% dplyr::filter(emp.status2 == 1)
+miss.data <- latent.data2 %>% dplyr::filter(emp.status2 == 0)
+
+## Step3.1 最尤法により逆ミズル比を求める
+
+##　プロビットモデルから推定値を得る
+MLE.output <- glm(formula = emp.status2 ~ iq,
+                  data = latent.data2,
+                  family=binomial(probit))
+summary(MLE.output)
+
+## 逆ミズル比を計算
+inv.mills.obs <- dnorm(MLE.output$coefficients[1] + MLE.output$coefficients[2]*obs.data$iq) / pnorm(MLE.output$coefficients[1] + MLE.output$coefficients[2]*obs.data$iq)
+
+inv.mills.miss <- (-1) * dnorm(MLE.output$coefficients[1] + MLE.output$coefficients[2]*miss.data$iq) / (1 - pnorm(MLE.output$coefficients[1] + MLE.output$coefficients[2]*miss.data$iq))
+
+obs.data <- as.data.frame(cbind(obs.data, inv.mills.obs))
+miss.data <- as.data.frame(cbind(miss.data,inv.mills.miss))
+
+
+## 3.2 逆ミズル比を踏まえて期待賃金関数を求める。
+
+
+unbiased.lm <- lm(formula = latent.wage ~ iq + inv.mills.obs,
+                  data = obs.data)
+summary(unbiased.lm)
+
+
+pred.wage3 <- unbiased.lm$coefficients[1] + 
+        unbiased.lm$coefficients[2]*miss.data$iq +
+        unbiased.lm$coefficients[3]*miss.data$inv.mills.miss
+
+
+resid3 <- miss.data$latent.wage - pred.wage3
+miss.data <- as.data.frame(cbind(miss.data, pred.wage3, resid3))
+
+ggplot2::ggplot(
+        ggplot2::aes(x = pred.wage3, 
+                     y = resid3), 
+        data = miss.data) +
+        ggplot2::geom_point() +
+        ggplot2::geom_abline(slope = 0, intercept = 0,
+                             color = "red") +
+        ggplot2::stat_smooth(method = "lm") +
+        ggplot2::labs(title = "Heckman's sample selection bias correction",
+                      x = "predicted wage for unemployed",
+                      y = "resididual")
+
+## Sample Selection Biasの除去に成功
+
+
+
+
+
+## 本人以外の家計収入の内生性を考慮せずにプロビットモデルを推定
+
+miss.data <- miss.data %>% dplyr::select("pred.wage3", "iq", "emp.status2") %>% dplyr::rename(wage = pred.wage3)
+
+obs.data <- obs.data %>% dplyr::select("latent.wage", "iq", "emp.status2") %>% dplyr::rename(wage = latent.wage)
+
+##これをもとにプロビット分析をする
+final.data <- dplyr::bind_rows(miss.data, obs.data) %>% 
+        dplyr::mutate(log.wage = log(wage)) 
+
+
+
+
+
+
+
