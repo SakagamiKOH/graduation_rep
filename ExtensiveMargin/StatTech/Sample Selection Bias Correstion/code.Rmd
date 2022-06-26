@@ -294,9 +294,6 @@ miss.data <- miss.data %>% dplyr::select("pred.wage3", "iq", "emp.status2") %>% 
 
 obs.data <- obs.data %>% dplyr::select("latent.wage", "iq", "emp.status2") %>% dplyr::rename(wage = latent.wage)
 
-##これをもとにプロビット分析をする
-final.data <- dplyr::bind_rows(miss.data, obs.data) %>% 
-        dplyr::mutate(log.wage = log(wage)) 
 
 
 
