@@ -133,11 +133,17 @@ latent.wage <- 1000 + param*iq + error.term　##潜在的な賃金(時給)
 pre.emp.status <- runif(n = sample.size, min = 0, max = 1)
 emp.status <- ifelse(pre.emp.status >= 0.5, 1, 0) ##失業・就業がランダムに決まる。ランダムな確率0.5で失業
 
+
 ##人間には入手できない完全データ
 perfect.data <- as.data.frame(cbind(emp.status,
                                latent.wage,
                                iq))
 
+## 欠損に規則性がないことを確認
+ggplot2::ggplot(data = perfect.data,
+                mapping = ggplot2::aes(x = iq, y = latent.wage,
+                                       color = emp.status)) +
+        ggplot2::geom_point()
 
 ##働いている人の賃金データしか得ることができない現実のデータ
 obs.data <- perfect.data %>% dplyr::filter(emp.status == 1) %>%
@@ -146,6 +152,7 @@ obs.data <- perfect.data %>% dplyr::filter(emp.status == 1) %>%
 ##計測されないデータセット
 miss.data <- perfect.data %>% dplyr::filter(emp.status == 0) %>%
         dplyr::select(-emp.status)  
+
 
 ```
         
@@ -211,11 +218,11 @@ wage.params <- c(1000, 2)
 names(wage.params) <- c("incep", "coef") ##賃金関数のパラメーターを設定
 
 
-emp.params <- c(-100,1) ##働くか否かのモデル式のパラメーター
+emp.params <- c(-2,0.1) ##働くか否かのモデル式のパラメーター
 names(emp.params) <- c("incep", "coef")
 
 exp.vec <- c(0,0)　##期待値ベクトル
-sigma <-  matrix(c(10^2, -10*10 +1, -10*10 + 1, 10^2), ncol = 2) ##分散共分散行列
+sigma <-  matrix(c(100^2, 100*15 - 150, 100*15 - 150, 15^2), ncol = 2) ##分散共分散行列
 rand <-  mvtnorm::rmvnorm(n = sample.size, mean = exp.vec, sigma) ##誤差項
 
 
@@ -230,6 +237,12 @@ sum(emp.status)/sample.size ##就業率を確認
 perfect.data <- as.data.frame(cbind(wage, 
                                     emp.status,
                                     iq))
+
+
+ggplot2::ggplot(data = perfect.data,
+                mapping = ggplot2::aes(x = iq, y = wage,
+                                       color = emp.status)) +
+        ggplot2::geom_point()
 
 ## サンプルセレクションバイアスがかかったデータ.現実に入手可能なデータ
 obs.data <- perfect.data %>% dplyr::filter(emp.status == 1) %>%
@@ -251,7 +264,7 @@ miss.data <- perfect.data %>% dplyr::filter(emp.status == 0) %>%
 
 ## 観察データを用いて回帰分析
 biased.lm <- lm(wage ~ iq, data = obs.data)
-summary(biased.lm) ##真値2に対して推定値1.6993 とやや大きめのバイアスがかかっている
+summary(biased.lm) 
 
 
 ## その結果をそのまま観察不可能データの予測に適用
@@ -276,6 +289,17 @@ ggplot2::ggplot(
                       x = "predicted wage for unemployed",
                       y = "resididual")
 
+## Sample Selection Biasを図示して確認
+ggplot2::ggplot(
+        ggplot2::aes(x = iq, 
+                     y = wage), 
+        data = obs.data) +
+        ggplot2::geom_point() +
+        ggplot2::stat_smooth(method = "lm") +
+        ggplot2::geom_abline(slope = wage.params["coef"], 
+                             intercept = wage.params["incep"],
+                             color = "red") +
+        ggplot2::labs(title = "Sample selection bias")
 ```
 sample selection biasがかかっていて推定値に基づく予測値にバイアスあり
 
