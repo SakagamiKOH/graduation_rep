@@ -9,101 +9,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# 1. 逆ミズル比
-
-https://ryotamugiyama.com/wp-content/uploads/2016/11/millsratio.html
-参照。
-
-```{r InvMills}
-##xの値を等間隔で取っていく
-
-x <- seq(-200,400,length=600)
-##期待値100, 分散100の正規分布を図示
-plot(x, dnorm(x,mean=100,sd=100), type="l", xlab="Y*", ylab="", yaxt="n", main="normal distribution and truncation")
-##観察されずに打ち切りになるcut-offを追加で図示
-abline(v = 0)
-
-##以下ではcut-off以下で打ち切りになる部分に影を付けて図示
-xvals <- seq(-200, 0, length=200)
-dvals <- dnorm(xvals, mean=100, sd=100)
-polygon(c(xvals,rev(xvals)), c(rep(0,200), rev(dvals)), col="gray")
-
-
-#install.packages("truncnorm") #切断正規分布を作るためのパッケージ"truncnorm"をインストール．
-library(truncnorm)
-##標準化した誤差項の実現時：残差を-3から3まで等間隔でとる
-x <- seq(-3,3,length=1000)
-##標準正規分布をプロットする
-plot(x, dnorm(x, mean=0, sd=1), 
-     type="l", ylim=c(0,0.5), 
-     xlab="u/σ", ylab="", main="truncated normal distribution")
-##truncated standard normal dist with cut-off = -0.8
-lines(x, dtruncnorm(x, a=-0.8, mean=0, sd=1), type="l", col="red")
-
-##truncated standard normal dist with cut-off = -1
-#lines(x, dtruncnorm(x, a= -1, mean=0, sd=1), type="l", col="blue")
-#dtruncnorm(a = cut-off)である
-
-##凡例を入れた
-legend("topright", 
-       legend=c("standard normal dist","truncated"),
-       lty=c(1,1),
-       col=c("black","red"),
-       bty="n"
-)
-
-
-
-#### cut-offをいくつに設定するかでcut-offを作らない場合の分布との違いが決まる
-
-#まずcut-offを設けないもとの分布
-plot(x, dnorm(x, mean=0, sd=1), 
-     type="l", ylim=c(0,0.75), 
-     xlab="u/σ", ylab="", 
-     main="relations between -Xβ and truncated normal distribution")
-## cut-offを大きめに設定。もとの分布と形が大きく異なる
-lines(x, dtruncnorm(x, a=-0.25, mean=0, sd=1), type="l", col="red")
-## cut-offを小さめに設定。もとの分布と形があまり異ならない。
-lines(x, dtruncnorm(x, a=-1.6, mean=0, sd=1), type="l", lty=2, col="blue")
-## 凡例を挿入
-legend("topright", 
-       legend=c("standard normal dist","large -Xβ","small -Xβ"),
-       lty=c(1,1,2),
-       col=c("black","red","blue"),
-       bty="n"
-)
-
-
-
-##### Inverse mills ratio の図示
-
-x <- seq(-3,3,length=1000)
-## PDF of Standard Normal Distを図示
-plot(x, dnorm(x,mean=0,sd=1), 
-     type="l", ylim=c(0,3), 
-     xlab="Xβ", ylab="", 
-     main="change of mills ratio when Xβ are changed")
-## CDF of Standard Normal Distを図示
-lines(x, pnorm(x,mean=0,sd=1), type="l",  lty=2, col = "blue")
-lines(x, dnorm(x,mean=0,sd=1)/pnorm(x,mean=0,sd=1), type="l", col="red")
-## 凡例を挿入
-legend("topright", 
-       legend=c("pdf","cdf","invmills"),
-       lty=c(1,2,1),
-       col=c("black","blue","red"),
-       bty="n"
-       )
-
-
-## Inverse mills ratio を手計算でやってみる
-cut_off1 <- -0.25
-cut_off2 <- -1.6
-
-inv.mill1 <- dnorm(cut_off1)/pnorm(cut_off1)
-inv.mill2 <- dnorm(cut_off2)/pnorm(cut_off2)
-cat(inv.mill1, inv.mill2)
-
-```
 
 # Sample Selection Bias Correction
 
@@ -381,7 +286,104 @@ ggplot2::ggplot(
 
 ```
 
-## 3:疑問点  
+# 3. 補足：逆ミズル比
+
+https://ryotamugiyama.com/wp-content/uploads/2016/11/millsratio.html
+参照。
+
+```{r InvMills}
+##xの値を等間隔で取っていく
+
+x <- seq(-200,400,length=600)
+##期待値100, 分散100の正規分布を図示
+plot(x, dnorm(x,mean=100,sd=100), type="l", xlab="Y*", ylab="", yaxt="n", main="normal distribution and truncation")
+##観察されずに打ち切りになるcut-offを追加で図示
+abline(v = 0)
+
+##以下ではcut-off以下で打ち切りになる部分に影を付けて図示
+xvals <- seq(-200, 0, length=200)
+dvals <- dnorm(xvals, mean=100, sd=100)
+polygon(c(xvals,rev(xvals)), c(rep(0,200), rev(dvals)), col="gray")
+
+
+#install.packages("truncnorm") #切断正規分布を作るためのパッケージ"truncnorm"をインストール．
+library(truncnorm)
+##標準化した誤差項の実現時：残差を-3から3まで等間隔でとる
+x <- seq(-3,3,length=1000)
+##標準正規分布をプロットする
+plot(x, dnorm(x, mean=0, sd=1), 
+     type="l", ylim=c(0,0.5), 
+     xlab="u/σ", ylab="", main="truncated normal distribution")
+##truncated standard normal dist with cut-off = -0.8
+lines(x, dtruncnorm(x, a=-0.8, mean=0, sd=1), type="l", col="red")
+
+##truncated standard normal dist with cut-off = -1
+#lines(x, dtruncnorm(x, a= -1, mean=0, sd=1), type="l", col="blue")
+#dtruncnorm(a = cut-off)である
+
+##凡例を入れた
+legend("topright", 
+       legend=c("standard normal dist","truncated"),
+       lty=c(1,1),
+       col=c("black","red"),
+       bty="n"
+)
+
+
+
+#### cut-offをいくつに設定するかでcut-offを作らない場合の分布との違いが決まる
+
+#まずcut-offを設けないもとの分布
+plot(x, dnorm(x, mean=0, sd=1), 
+     type="l", ylim=c(0,0.75), 
+     xlab="u/σ", ylab="", 
+     main="relations between -Xβ and truncated normal distribution")
+## cut-offを大きめに設定。もとの分布と形が大きく異なる
+lines(x, dtruncnorm(x, a=-0.25, mean=0, sd=1), type="l", col="red")
+## cut-offを小さめに設定。もとの分布と形があまり異ならない。
+lines(x, dtruncnorm(x, a=-1.6, mean=0, sd=1), type="l", lty=2, col="blue")
+## 凡例を挿入
+legend("topright", 
+       legend=c("standard normal dist","large -Xβ","small -Xβ"),
+       lty=c(1,1,2),
+       col=c("black","red","blue"),
+       bty="n"
+)
+
+
+
+##### Inverse mills ratio の図示
+
+x <- seq(-3,3,length=1000)
+## PDF of Standard Normal Distを図示
+plot(x, dnorm(x,mean=0,sd=1), 
+     type="l", ylim=c(0,3), 
+     xlab="Xβ", ylab="", 
+     main="change of mills ratio when Xβ are changed")
+## CDF of Standard Normal Distを図示
+lines(x, pnorm(x,mean=0,sd=1), type="l",  lty=2, col = "blue")
+lines(x, dnorm(x,mean=0,sd=1)/pnorm(x,mean=0,sd=1), type="l", col="red")
+## 凡例を挿入
+legend("topright", 
+       legend=c("pdf","cdf","invmills"),
+       lty=c(1,2,1),
+       col=c("black","blue","red"),
+       bty="n"
+       )
+
+
+## Inverse mills ratio を手計算でやってみる
+cut_off1 <- -0.25
+cut_off2 <- -1.6
+
+inv.mill1 <- dnorm(cut_off1)/pnorm(cut_off1)
+inv.mill2 <- dnorm(cut_off2)/pnorm(cut_off2)
+cat(inv.mill1, inv.mill2)
+
+```
+
+
+## 4:疑問点  
   
 - そもそもなぜロジスティック回帰ではなくプロビット回帰を使うのか
 
