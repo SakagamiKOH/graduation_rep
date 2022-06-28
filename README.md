@@ -7,7 +7,7 @@
 ### 論文本文
 - 若年者就業率における賃金弾力性
 
-### 統計学
+### 実証分析
 - Heckman's correction
 - Instrument Variables
 - Probit Model

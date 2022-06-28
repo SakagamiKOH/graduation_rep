@@ -1,1 +1,16 @@
+## IV理論
 
+"ミクロ計量経済学入門" "北村道宏(著)" "日本評論社(出版)"
+"部分識別入門" "奥村綱雄(著)" "日本評論社(出版)"
+https://donskerclass.github.io/EconometricsII/MoreIV.html
+https://qiita.com/KeiSakam/items/cee424f184914eebaae3
+
+
+## IVに関するRパッケージ
+
+https://yukiyanai.github.io/jp/classes/econometrics2/contents/R/IV-method.html
+https://cran.r-project.org/web/packages/ivreg/vignettes/ivreg.html
+https://www.rdocumentation.org/packages/AER/versions/1.2-10/topics/ivreg
+
+## 補足
+ミクロデータサイエンス(古川)20年度, 21年度
