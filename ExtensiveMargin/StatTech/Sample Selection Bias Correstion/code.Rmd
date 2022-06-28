@@ -289,7 +289,28 @@ ggplot2::ggplot(
   
 パッケージを使って上記のバイアス補正を行う。
 
+```{r Heckman_Package}
 
+panel.data <- perfect.data
+
+## もっとスマートな書き方ありそうだけど、、、
+for(i in 1:sample.size){
+  if(perfect.data$emp.status[i] == 0){
+    panel.data$wage[i] = NA
+  }
+}
+
+
+## selction(step1'S outcome variable ~ step1's independent variables,
+##          step2's outcome variable ~ step2's independent variables)
+## ただしここでの"step1"とは労働者が働くか否かを決めるモデル式推定、
+## "step2"とは労働者の賃金を決めるモデル式推定を指す
+heckman <- sampleSelection::selection(emp.status ~ iq,
+                                      wage ~ iq,
+                                      data = panel.data)
+summary(heckman)
+
+```
 # 3. 補足：逆ミズル比
 
 https://ryotamugiyama.com/wp-content/uploads/2016/11/millsratio.html
