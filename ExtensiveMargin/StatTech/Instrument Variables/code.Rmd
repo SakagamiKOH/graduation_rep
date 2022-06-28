@@ -18,20 +18,20 @@ library(magrittr)
 my.seed <- 1925096 ## シミュレーション結果を固定
 set.seed(my.seed)  ## シミュレーション結果を固定
 
-sample.size <- 500 ##サンプルサイズを指定
+samp.size <- 10000 ##サンプルサイズを指定
 
-mother.sch <- as.integer(runif(sample.size,
+mother.sch <- as.integer(runif(samp.size,
                                min = 9, max = 22)) ##中卒から博士まで一様に分布する
 
 
-father.sch <- as.integer(runif(sample.size,
+father.sch <- as.integer(runif(samp.size,
                                min = 9, max = 22)) ##中卒から博士まで一様に分布する
 
-child.iq <- rnorm(sample.size,
+child.iq <- rnorm(samp.size,
                   mean = 100, sd = 15) ##子供のIQの値
 
 ## 結果変数Y_1,Y_2は同時に決まるからここではまだ空ベクトルの状態
-child.wage <- parents.wage <- rep(NA, sample.size)
+child.wage <- parents.wage <- rep(NA, samp.size)
 
 params <- c(1000, 1, 2, -0.5, 1000, -0.5, 2) 
 names(params) <- c("beta_20", "beta_21", "beta_22", "beta_23",
@@ -41,7 +41,7 @@ names(params) <- c("beta_20", "beta_21", "beta_22", "beta_23",
 
 coef.mat <- matrix(c(1, -params["beta_11"], -params["beta_23"], 1),2,2)
 
-for(i in 1:sample.size){
+for(i in 1:samp.size){
   
   ## Ax = bの解ｂを作成
   b <- c(params["beta_10"] + params["beta_12"]*child.iq[i],
@@ -57,8 +57,8 @@ for(i in 1:sample.size){
 
 
 ## 観測されない要素による誤差項を加える
-error.term1 <- rnorm(sample.size, mean = 0, sd = 15)
-error.term2 <- rnorm(sample.size, mean = 0, sd = 15)
+error.term1 <- rnorm(samp.size, mean = 0, sd = 15)
+error.term2 <- rnorm(samp.size, mean = 0, sd = 15)
 
 child.wage <- child.wage + error.term1
 parents.wage <- parents.wage + error.term2
@@ -82,13 +82,46 @@ simul.bias.lm <- lm(child.wage ~ parents.wage + child.iq,
 summary(simul.bias.lm)
 ```
 
+child.idの係数には上方バイアス、parents.wageの係数には下方バイアスがかかる。
+
 ## IVによる推定
 
-step1
+Theory.pdfを参照のこと
 
-```{r IV_step1}
+```{r IV_hand.made}
 
-lm.1SLS <- lm(parents.wage ~ father.sch + mother.sch,
-              data = panel.data)
+## 1ベクトル作成(切片パラメターを推定するため)
+one.vec <- rep(1, samp.size)
+## 操作変数行列
+iv.mat <- cbind(one.vec, panel.data[,c("father.sch","mother.sch")]) %>% as.matrix()
+## 内生変数行列
+endog.mat <- as.matrix(panel.data[,c("parents.wage")])
+## 外生変数行列
+exogen.mat <- as.matrix(panel.data[,c("child.iq")])
+## 結果変数ベクトル
+depen.vec <- as.vector(panel.data[,c("child.wage")])
+
+
+## 途中経過の行列
+pred.endog.mat <- iv.mat %*% solve((t(iv.mat) %*% iv.mat)) %*% t(iv.mat) %*% endog.mat %>% as.matrix()
+pred.endog.mat <- cbind(one.vec, pred.endog.mat) %>% as.matrix()
+
+## 途中経過の行列
+mat.M <- cbind(one.vec,endog.mat, exogen.mat) %>% as.matrix()
+mat.Mhat <- cbind(pred.endog.mat, exogen.mat) %>% as.matrix()
+
+## IVによる一致推定量を求める
+IV.estimate <- solve(t(mat.Mhat) %*% mat.M) %*% t(mat.Mhat) %*% depen.vec
+
+IV.estimate
+```
+
+相当ましな推定値。パラメータにだいぶ近い値になっている。
+
+## IVによる推定(既存のパッケージを使う)
+
+上のやり方ではIV推定値の信頼区間などが解らない。この信頼区間に関わる理解まで数理統計で行いプログラムすることは難しいい。よって既存のプログラムに頼って分析する。
+
+```{r IV_package}
 
 ```
