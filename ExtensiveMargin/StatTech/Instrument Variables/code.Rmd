@@ -1,5 +1,5 @@
 ---
-title: "simultaneity_bias"
+title: "simultaneity bias and its correction"
 author: "坂上 幸"
 date: "2022/6/25"
 output: html_document
@@ -124,4 +124,13 @@ IV.estimate
 
 ```{r IV_package}
 
+# ivreg(Y ~ X + W | W + Z, data)
+# where Y is outcome variable, X is endogenous vars, W is any exogenous vars not including instruments, and Z is the instruments. 
+IV.reg <- ivreg::ivreg(formula = child.wage ~ parents.wage + child.iq |
+                        father.sch + mother.sch + child.iq,
+                       data = panel.data)
+summary(IV.reg)
 ```
+パッケージを使った結果は手計算の内容と一致した。しかし細かい分析結果で何を言っているのか良く解らない箇所もいくつかある、、、
+
+
