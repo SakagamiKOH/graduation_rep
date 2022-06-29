@@ -13,6 +13,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## 設定
 
+samp.sizeを変えて一致性を確認できる
+
 ```{r setting}
 library(magrittr)
 my.seed <- 1925096 ## シミュレーション結果を固定
@@ -31,7 +33,7 @@ child.iq <- rnorm(samp.size,
                   mean = 100, sd = 15) ##子供のIQの値
 
 ## 結果変数Y_1,Y_2は同時に決まるからここではまだ空ベクトルの状態
-child.wage <- parents.wage <- rep(NA, samp.size)
+child.income <- parents.income <- rep(NA, samp.size)
 
 params <- c(1000, 1, 2, -0.5, 1000, -0.5, 2) 
 names(params) <- c("beta_20", "beta_21", "beta_22", "beta_23",
@@ -51,8 +53,8 @@ for(i in 1:samp.size){
   solution <- solve(coef.mat, b)
   
   ## 同時に決定したY_1, Y_2を保存
-  child.wage[i] <- solution[1]
-  parents.wage[i] <- solution[2]
+  child.income[i] <- solution[1]
+  parents.income[i] <- solution[2]
 }
 
 
@@ -60,12 +62,12 @@ for(i in 1:samp.size){
 error.term1 <- rnorm(samp.size, mean = 0, sd = 15)
 error.term2 <- rnorm(samp.size, mean = 0, sd = 15)
 
-child.wage <- child.wage + error.term1
-parents.wage <- parents.wage + error.term2
+child.income <- child.income + error.term1
+parents.income <- parents.income + error.term2
 
 
 ## パネルデータ作成
-panel.data <- cbind(child.wage, parents.wage, mother.sch,
+panel.data <- cbind(child.income, parents.income, mother.sch,
                     father.sch, child.iq) %>% 
   as.data.frame()
 
@@ -77,7 +79,7 @@ panel.data <- cbind(child.wage, parents.wage, mother.sch,
 
 ```{r biased_estimate}
 
-simul.bias.lm <- lm(child.wage ~ parents.wage + child.iq,
+simul.bias.lm <- lm(child.income ~ parents.income + child.iq,
                     data = panel.data)
 summary(simul.bias.lm)
 ```
@@ -95,11 +97,11 @@ one.vec <- rep(1, samp.size)
 ## 操作変数行列
 iv.mat <- cbind(one.vec, panel.data[,c("father.sch","mother.sch")]) %>% as.matrix()
 ## 内生変数行列
-endog.mat <- as.matrix(panel.data[,c("parents.wage")])
+endog.mat <- as.matrix(panel.data[,c("parents.income")])
 ## 外生変数行列
 exogen.mat <- as.matrix(panel.data[,c("child.iq")])
 ## 結果変数ベクトル
-depen.vec <- as.vector(panel.data[,c("child.wage")])
+depen.vec <- as.vector(panel.data[,c("child.income")])
 
 
 ## 途中経過の行列
@@ -126,7 +128,7 @@ IV.estimate
 
 # ivreg(Y ~ X + W | W + Z, data)
 # where Y is outcome variable, X is endogenous vars, W is any exogenous vars not including instruments, and Z is the instruments. 
-IV.reg <- ivreg::ivreg(formula = child.wage ~ parents.wage + child.iq |
+IV.reg <- ivreg::ivreg(formula = child.income ~ parents.income + child.iq |
                         father.sch + mother.sch + child.iq,
                        data = panel.data)
 summary(IV.reg)
