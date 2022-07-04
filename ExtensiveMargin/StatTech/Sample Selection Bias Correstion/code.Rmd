@@ -19,7 +19,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### 1.1 問題設定
   
-真のモデル。データ生成過程。  
+真のモデルを設定する。データ生成過程。  
 
 ```{r setting}  
 
