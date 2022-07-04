@@ -38,6 +38,12 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
+# for mac
+.DS_store
+
+# prevent any logs from committing
+*.log
+
 # Overleaf Environment
 *.synctex.gz
 *.aux
